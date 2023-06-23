@@ -1,0 +1,7 @@
+ignore:
+  - "**/*_mock/**"
+  - "tools/**"
+  - "cmd/**"
+  - "pkg/typdb"
+  - "pkg/typdocker"
+  - "pkg/typredis"
