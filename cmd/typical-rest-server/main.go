@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"syscall"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -28,7 +29,13 @@ func main() {
 		envkit.Setenv(m)
 	}
 
-	if err := typapp.StartApp(app.Start, app.Shutdown); err != nil {
+	// Exit Signals that trigger to close application
+	exitSigs := []os.Signal{
+		syscall.SIGTERM,
+		syscall.SIGINT,
+	}
+
+	if err := typapp.StartApp(app.Start, app.Shutdown, exitSigs...); err != nil {
 		logrus.Fatal(err.Error())
 	}
 

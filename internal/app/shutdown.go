@@ -1,6 +1,8 @@
 package app
 
 import (
+	"github.com/typical-go/typical-rest-server/internal/app/controller/kafka"
+
 	"context"
 	"database/sql"
 	"fmt"
@@ -25,6 +27,8 @@ func Shutdown(p struct {
 	fmt.Printf("Shutdown at %s", time.Now().String())
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
+
+	kafka.WG.Wait()
 
 	errs := errkit.Errors{
 		p.Pg.Close(),

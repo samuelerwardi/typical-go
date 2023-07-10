@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -12,6 +13,8 @@ import (
 	"go.uber.org/dig"
 	"gopkg.in/confluentinc/confluent-kafka-go.v1/kafka"
 )
+
+var WG sync.WaitGroup
 
 type handler func(context.Context, *kafka.Message) error
 
@@ -30,6 +33,7 @@ func (ox *KafkaCtrl) KafkaRoute() {
 		return
 	}
 
+	WG.Add(1)
 	go func() {
 		for {
 			msg, err := ox.KafkaConsumer.ReadMessage(-1)
