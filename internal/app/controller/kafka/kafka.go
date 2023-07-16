@@ -5,7 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"os/signal"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -33,20 +35,37 @@ func (ox *KafkaCtrl) KafkaRoute() {
 		return
 	}
 
+	ctx, _ := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+
 	WG.Add(1)
-	go func() {
+	go func(ctx context.Context, wg *sync.WaitGroup) {
 		for {
-			msg, err := ox.KafkaConsumer.ReadMessage(-1)
-			if err != nil {
-				logrus.Errorf("error occurred on consumer %s, detail: %v", os.Getenv("APP_ADDRESS"), err)
-				continue
+			select {
+			case <-ctx.Done():
+				logrus.Debug("Shutdown Kafka consumer")
+				wg.Done()
+				return
+			default:
+				{
+					msg, err := ox.KafkaConsumer.ReadMessage(1 * time.Second)
+					if err != nil {
+						if err.(kafka.Error).Code() != kafka.ErrTimedOut {
+							logrus.Errorf("error occurred on consumer %s, detail: %v", os.Getenv("APP_ADDRESS"), err)
+							continue
+						}
+					}
+
+					if msg != nil {
+						logrus.Info("kafka message : " + msg.String())
+					} else {
+						logrus.Info("No message")
+					}
+
+					ox.handleMessage(msg)
+				}
 			}
-
-			logrus.Infof("kafka message : %s", msg.String())
-
-			ox.handleMessage(msg)
 		}
-	}()
+	}(ctx, &WG)
 }
 
 func (ox *KafkaCtrl) register(topic string, handlr handler) (err error) {
